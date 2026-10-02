@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>무지개 표 R1~R10</title>
+<style>
+:root{--bg:#f6f6f4;--fg:#1f1f1f;--card:#fff;--line:#ddd;--btn:#2b59c3;--btnfg:#fff;--muted:#777;--up:#2e7d32;--down:#c62828;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171717;--fg:#eee;--card:#222;--line:#3a3a3a;--btn:#6b8fe8;--btnfg:#111;--muted:#999;--up:#66bb6a;--down:#ef5350}}
+:root[data-theme="dark"]{--bg:#171717;--fg:#eee;--card:#222;--line:#3a3a3a;--btn:#6b8fe8;--btnfg:#111;--muted:#999;--up:#66bb6a;--down:#ef5350}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+nav{position:sticky;top:env(safe-area-inset-top,0px);display:flex;gap:6px;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--line);z-index:5}
+.tab{background:transparent;color:var(--fg);border:1px solid var(--line);padding:8px 20px}
+.tab.active{background:var(--btn);color:var(--btnfg);border-color:var(--btn)}
+main{max-width:960px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:0 0 4px}
+p.sub{margin:0 0 16px;color:var(--muted);font-size:14px}
+button{background:var(--btn);color:var(--btnfg);border:0;border-radius:8px;padding:10px 22px;font-size:16px;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.hidden{display:none}
+.msg{margin-top:24px;color:var(--muted)}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px}
+.card h2{margin:0 0 8px;font-size:16px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td{padding:5px 6px;border-top:1px solid var(--line)}
+td.v{text-align:right;font-weight:600}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+#pcard{max-width:420px;margin:20px auto 0;padding:16px}
+#pcard h2{font-size:24px;margin-bottom:12px}
+#pcard table{font-size:20px}
+#pcard td{padding:10px 8px}
+#pcard td.d{text-align:right;font-size:15px;width:64px}
+.up{color:var(--up)}.down{color:var(--down)}.same{color:var(--muted)}
+.ctrl{display:flex;justify-content:center;gap:10px;margin-top:16px}
+</style>
+</head>
+<body>
+<nav>
+<button class="tab active" id="tab-gen">생성</button>
+<button class="tab" id="tab-pres">발표</button>
+</nav>
+<main>
+<section id="view-gen">
+<h1>무지개 표 R1 ~ R10</h1>
+<p class="sub">R1은 전부 10, 이후 라운드마다 -6 ~ +6 랜덤 변동 (최솟값 1)</p>
+<button id="gen">생성</button>
+<div id="empty" class="msg">아직 생성된 표가 없습니다. '생성' 버튼을 눌러주세요.</div>
+<div id="grid"></div>
+</section>
+<section id="view-pres" class="hidden">
+<div id="pnone" class="msg">먼저 '생성' 탭에서 표를 생성해주세요.</div>
+<div id="pbox" class="hidden">
+<div class="card" id="pcard"></div>
+<div class="ctrl">
+<button class="ghost" id="prev">이전 라운드</button>
+<button id="next">다음 라운드</button>
+</div>
+</div>
+</section>
+</main>
+<script>
+var COLORS=[["빨강","#e53935"],["주황","#fb8c00"],["노랑","#fdd835"],["초록","#43a047"],["파랑","#1e88e5"],["남색","#3949ab"],["보라","#8e24aa"]];
+var KEY="rainbow-tables-v2",IKEY="rainbow-present-idx-v2";
+function lget(k){try{var s=localStorage.getItem(k);return s?JSON.parse(s):null}catch(e){return null}}
+function lset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function make(){
+  var rounds=[],cur=COLORS.map(function(){return 10});
+  rounds.push(cur);
+  for(var r=1;r<10;r++){
+    cur=cur.map(function(v){return Math.max(1,v+Math.floor(Math.random()*13)-6)});
+    rounds.push(cur);
+  }
+  return rounds;
+}
+function renderGen(){
+  var g=document.getElementById("grid");g.innerHTML="";
+  document.getElementById("empty").classList.toggle("hidden",!!data);
+  if(!data)return;
+  data.forEach(function(vals,i){
+    var c=document.createElement("div");c.className="card";
+    var rows=COLORS.map(function(col,j){
+      return '<tr><td><span class="dot" style="background:'+col[1]+'"></span>'+col[0]+'</td><td class="v">'+vals[j]+'</td></tr>';
+    }).join("");
+    c.innerHTML='<h2>R'+(i+1)+'</h2><table>'+rows+'</table>';
+    g.appendChild(c);
+  });
+}
+function renderPres(){
+  document.getElementById("pnone").classList.toggle("hidden",!!data);
+  document.getElementById("pbox").classList.toggle("hidden",!data);
+  if(!data)return;
+  var vals=data[idx],prev=idx>0?data[idx-1]:null;
+  var rows=COLORS.map(function(col,j){
+    var d="";
+    if(prev){var diff=vals[j]-prev[j];d=diff>0?'<span class="up">▲ '+diff+'</span>':diff<0?'<span class="down">▼ '+(-diff)+'</span>':'<span class="same">–</span>'}
+    return '<tr><td><span class="dot" style="background:'+col[1]+'"></span>'+col[0]+'</td><td class="v">'+vals[j]+'</td><td class="d">'+d+'</td></tr>';
+  }).join("");
+  document.getElementById("pcard").innerHTML='<h2>R'+(idx+1)+' <span class="same" style="font-size:14px">/ '+data.length+'</span></h2><table>'+rows+'</table>';
+  document.getElementById("prev").disabled=idx===0;
+  var n=document.getElementById("next");
+  n.disabled=idx>=data.length-1;
+  n.textContent=idx>=data.length-1?"마지막 라운드":"다음 라운드";
+}
+function show(v){
+  document.getElementById("view-gen").classList.toggle("hidden",v!=="gen");
+  document.getElementById("view-pres").classList.toggle("hidden",v!=="pres");
+  document.getElementById("tab-gen").classList.toggle("active",v==="gen");
+  document.getElementById("tab-pres").classList.toggle("active",v==="pres");
+  if(v==="pres")renderPres();
+}
+var data=lget(KEY),idx=lget(IKEY)||0;
+if(!data||idx<0||idx>=data.length)idx=0;
+renderGen();
+document.getElementById("tab-gen").onclick=function(){show("gen")};
+document.getElementById("tab-pres").onclick=function(){show("pres")};
+document.getElementById("gen").onclick=function(){
+  if(data&&!confirm("이미 생성된 표가 있습니다. 새로 생성할까요?"))return;
+  data=make();idx=0;lset(KEY,data);lset(IKEY,idx);renderGen();
+};
+document.getElementById("next").onclick=function(){if(idx<data.length-1){idx++;lset(IKEY,idx);renderPres()}};
+document.getElementById("prev").onclick=function(){if(idx>0){idx--;lset(IKEY,idx);renderPres()}};
+</script>
+</body>
+</html>
