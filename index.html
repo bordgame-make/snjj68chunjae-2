@@ -14,7 +14,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Ap
 nav{position:sticky;top:env(safe-area-inset-top,0px);display:flex;gap:6px;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--line);z-index:5}
 .tab{background:transparent;color:var(--fg);border:1px solid var(--line);padding:8px 20px}
 .tab.active{background:var(--btn);color:var(--btnfg);border-color:var(--btn)}
-main{max-width:960px;margin:0 auto;padding:20px 16px 40px}
+main{max-width:960px;margin:0 auto;padding:20px 16px 80px}
 h1{font-size:22px;margin:0 0 4px}
 p.sub{margin:0 0 16px;color:var(--muted);font-size:14px}
 button{background:var(--btn);color:var(--btnfg);border:0;border-radius:8px;padding:10px 22px;font-size:16px;cursor:pointer}
@@ -36,15 +36,46 @@ td.v{text-align:right;font-weight:600}
 #pcard td.d{text-align:right;font-size:15px;width:64px}
 .up{color:var(--up)}.down{color:var(--down)}.same{color:var(--muted)}
 .ctrl{display:flex;justify-content:center;gap:10px;margin-top:16px}
+.banner{margin:12px 0 4px;padding:10px 14px;border-radius:8px;background:var(--card);border:1px solid var(--line);font-weight:600}
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media (max-width:620px){.teams{grid-template-columns:1fr}}
+.team{padding:14px}
+.team.t0{border-top:4px solid #1e88e5}
+.team.t1{border-top:4px solid #e53935}
+.side{font-size:12px;margin-bottom:6px}
+.nm{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.nm input{flex:1;min-width:0;font-size:18px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+.total{font-size:28px;font-weight:700}
+.eq{font-size:16px;margin-top:2px}
+.cap{font-size:12px}
+.addrow{display:flex;align-items:center;gap:10px;margin:10px 0}
+button.plus{font-size:22px;padding:4px 18px}
+button.sm{font-size:13px;padding:5px 10px;margin-left:4px}
+th{font-size:12px;color:var(--muted);text-align:left;font-weight:500;padding:4px 6px}
+td.act{text-align:right;white-space:nowrap}
+.hold{margin-top:12px}
+.chips{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);border-radius:14px;padding:3px 10px;font-size:13px}
+#snack{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:#333;color:#fff;padding:12px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;max-width:90%;text-align:center}
+#snack.on{opacity:1}
 </style>
 </head>
 <body>
 <nav>
-<button class="tab active" id="tab-gen">생성</button>
+<button class="tab active" id="tab-main">메인</button>
+<button class="tab" id="tab-gen">생성</button>
 <button class="tab" id="tab-pres">발표</button>
 </nav>
 <main>
-<section id="view-gen">
+<section id="view-main">
+<h1>메인</h1>
+<p class="sub">두 팀 합쳐 한 종목은 최대 10개까지 보유할 수 있습니다 (수수료 없음)</p>
+<div id="mnodata" class="msg hidden">먼저 '생성' 탭에서 표를 생성해야 종목을 거래할 수 있습니다.</div>
+<div id="round" class="sub"></div>
+<div id="banner" class="banner"></div>
+<div id="teams" class="teams"></div>
+</section>
+<section id="view-gen" class="hidden">
 <h1>무지개 표 R1 ~ R10</h1>
 <p class="sub">R1은 전부 10, 이후 라운드마다 -6 ~ +6 랜덤 변동 (최솟값 1)</p>
 <button id="gen">생성</button>
@@ -62,9 +93,10 @@ td.v{text-align:right;font-weight:600}
 </div>
 </section>
 </main>
+<div id="snack"></div>
 <script>
 var COLORS=[["빨강","#e53935"],["주황","#fb8c00"],["노랑","#fdd835"],["초록","#43a047"],["파랑","#1e88e5"],["남색","#3949ab"],["보라","#8e24aa"]];
-var KEY="rainbow-tables-v2",IKEY="rainbow-present-idx-v2";
+var KEY="rainbow-tables-v2",IKEY="rainbow-present-idx-v2",MKEY="rainbow-main-v1";
 function lget(k){try{var s=localStorage.getItem(k);return s?JSON.parse(s):null}catch(e){return null}}
 function lset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function make(){
@@ -76,6 +108,10 @@ function make(){
   }
   return rounds;
 }
+var data=lget(KEY),idx=lget(IKEY)||0;
+if(!data||idx<0||idx>=data.length)idx=0;
+
+/* ---------- 생성 ---------- */
 function renderGen(){
   var g=document.getElementById("grid");g.innerHTML="";
   document.getElementById("empty").classList.toggle("hidden",!!data);
@@ -89,6 +125,8 @@ function renderGen(){
     g.appendChild(c);
   });
 }
+
+/* ---------- 발표 ---------- */
 function renderPres(){
   document.getElementById("pnone").classList.toggle("hidden",!!data);
   document.getElementById("pbox").classList.toggle("hidden",!data);
@@ -105,24 +143,106 @@ function renderPres(){
   n.disabled=idx>=data.length-1;
   n.textContent=idx>=data.length-1?"마지막 라운드":"다음 라운드";
 }
-function show(v){
-  document.getElementById("view-gen").classList.toggle("hidden",v!=="gen");
-  document.getElementById("view-pres").classList.toggle("hidden",v!=="pres");
-  document.getElementById("tab-gen").classList.toggle("active",v==="gen");
-  document.getElementById("tab-pres").classList.toggle("active",v==="pres");
-  if(v==="pres")renderPres();
+
+/* ---------- 메인 ---------- */
+function blank(n){return {name:n,cash:30,hold:COLORS.map(function(){return 0})}}
+var M=lget(MKEY);
+if(!M||!M.teams||M.teams.length!==2||M.teams.some(function(t){return !t.hold||t.hold.length!==COLORS.length}))M={teams:[blank("왼쪽"),blank("오른쪽")]};
+var reveal=[false,false];
+function saveM(){lset(MKEY,M)}
+function nm(i){return M.teams[i].name||(i?"오른쪽":"왼쪽")}
+function price(j){return data&&data[idx]?data[idx][j]:0}
+function inv(t){var s=0;for(var j=0;j<COLORS.length;j++)s+=t.hold[j]*price(j);return s}
+var st;
+function toast(m){var s=document.getElementById("snack");s.textContent=m;s.classList.add("on");clearTimeout(st);st=setTimeout(function(){s.classList.remove("on")},2200)}
+
+var tm=document.getElementById("teams");
+[0,1].forEach(function(i){
+  var d=document.createElement("div");d.className="card team t"+i;
+  d.innerHTML='<div class="side same">'+(i?"오른쪽":"왼쪽")+' 구역</div>'
+   +'<div class="nm"><input data-n="'+i+'" maxlength="12" placeholder="팀 이름"><span>팀</span></div>'
+   +'<div class="total" id="total'+i+'"></div><div class="eq" id="eq'+i+'"></div>'
+   +'<div class="cap same">보유 금액 + 투자 합계 = 총액</div>'
+   +'<div class="addrow"><button class="plus" data-a="plus" data-t="'+i+'">+</button><span class="same">문제 정답 시 +10</span></div>'
+   +'<table id="stk'+i+'"></table>'
+   +'<div class="hold"><button class="ghost sm" id="revbtn'+i+'" data-a="rev" data-t="'+i+'"></button><div class="chips" id="hold'+i+'"></div></div>';
+  tm.appendChild(d);
+  d.querySelector("input").value=M.teams[i].name;
+});
+
+function renderMain(){
+  document.getElementById("mnodata").classList.toggle("hidden",!!data);
+  document.getElementById("round").textContent=data?"현재 R"+(idx+1)+" 가격 기준 (발표 탭에서 라운드를 넘기면 가격이 바뀝니다)":"";
+  var tot=[];
+  [0,1].forEach(function(i){
+    var t=M.teams[i],iv=inv(t),tt=t.cash+iv;
+    tot[i]=tt;
+    document.getElementById("total"+i).textContent="총액 "+tt;
+    document.getElementById("eq"+i).textContent=t.cash+" + "+iv+" = "+tt;
+    var h='<tr><th>종목</th><th style="text-align:right">현재가</th><th></th></tr>';
+    COLORS.forEach(function(c,j){
+      h+='<tr><td><span class="dot" style="background:'+c[1]+'"></span>'+c[0]+'</td><td class="v">'+(data?price(j):"-")+'</td><td class="act">'
+        +'<button class="sm" data-a="buy" data-t="'+i+'" data-j="'+j+'">구매</button>'
+        +'<button class="sm ghost" data-a="sell" data-t="'+i+'" data-j="'+j+'">판매</button></td></tr>';
+    });
+    document.getElementById("stk"+i).innerHTML=h;
+    var hb=document.getElementById("hold"+i);
+    if(!reveal[i]){hb.innerHTML='<span class="same">보유 종목이 가려져 있습니다</span>'}
+    else{
+      var items=[];
+      COLORS.forEach(function(c,j){if(t.hold[j]>0)items.push('<span class="chip"><span class="dot" style="background:'+c[1]+'"></span>'+c[0]+' × '+t.hold[j]+'</span>')});
+      hb.innerHTML=items.length?items.join(""):'<span class="same">보유 종목 없음</span>';
+    }
+    document.getElementById("revbtn"+i).textContent=reveal[i]?"보유 종목 가리기":"보유 종목 보기";
+  });
+  document.getElementById("banner").textContent=tot[0]===tot[1]
+    ?"두 팀 총액이 같습니다 ("+tot[0]+")"
+    :(tot[0]>tot[1]?nm(0):nm(1))+"팀이 "+Math.abs(tot[0]-tot[1])+" 앞서고 있습니다 ("+tot[0]+" : "+tot[1]+")";
 }
-var data=lget(KEY),idx=lget(IKEY)||0;
-if(!data||idx<0||idx>=data.length)idx=0;
-renderGen();
-document.getElementById("tab-gen").onclick=function(){show("gen")};
-document.getElementById("tab-pres").onclick=function(){show("pres")};
+
+var vm=document.getElementById("view-main");
+vm.addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b||!b.dataset.a)return;
+  var a=b.dataset.a,i=+b.dataset.t,j=+b.dataset.j,t=M.teams[i];
+  if(a==="rev"){reveal[i]=!reveal[i]}
+  else if(a==="plus"){t.cash+=10;toast(nm(i)+"팀이 문제를 맞췄습니다")}
+  else{
+    if(!data){toast("먼저 '생성' 탭에서 표를 생성해주세요");return}
+    var p=price(j);
+    if(a==="buy"){
+      if(t.cash<p){toast("보유 금액이 부족합니다");return}
+      if(M.teams[0].hold[j]+M.teams[1].hold[j]>=10){toast("이 종목은 두 팀 합쳐 최대 10개까지입니다");return}
+      t.cash-=p;t.hold[j]++;
+    }else{
+      if(t.hold[j]<=0){toast("보유한 수량이 없습니다");return}
+      t.cash+=p;t.hold[j]--;
+    }
+  }
+  saveM();renderMain();
+});
+vm.addEventListener("input",function(e){
+  var n=e.target.dataset.n;if(n===undefined)return;
+  M.teams[+n].name=e.target.value.trim();saveM();renderMain();
+});
+
+/* ---------- 탭 / 이벤트 ---------- */
+function show(v){
+  ["main","gen","pres"].forEach(function(k){
+    document.getElementById("view-"+k).classList.toggle("hidden",k!==v);
+    document.getElementById("tab-"+k).classList.toggle("active",k===v);
+  });
+  if(v==="pres")renderPres();
+  if(v==="main")renderMain();
+}
+["main","gen","pres"].forEach(function(k){document.getElementById("tab-"+k).onclick=function(){show(k)}});
 document.getElementById("gen").onclick=function(){
   if(data&&!confirm("이미 생성된 표가 있습니다. 새로 생성할까요?"))return;
   data=make();idx=0;lset(KEY,data);lset(IKEY,idx);renderGen();
 };
 document.getElementById("next").onclick=function(){if(idx<data.length-1){idx++;lset(IKEY,idx);renderPres()}};
 document.getElementById("prev").onclick=function(){if(idx>0){idx--;lset(IKEY,idx);renderPres()}};
+renderGen();
+show("main");
 </script>
 </body>
 </html>
